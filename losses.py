@@ -36,7 +36,7 @@ class NCC:
         elif ndims == 2:
             stride = (1, 1)
             padding = (pad_no, pad_no)
-        else:
+        else: # Should default to 3d
             stride = (1, 1, 1)
             padding = (pad_no, pad_no, pad_no)
 

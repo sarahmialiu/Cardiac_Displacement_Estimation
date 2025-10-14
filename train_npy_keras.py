@@ -12,6 +12,7 @@ from scipy.ndimage import zoom
 import voxelmorph as vxm 
 import generators
 import losses
+import render_output
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 

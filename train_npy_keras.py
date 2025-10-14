@@ -13,6 +13,7 @@ import voxelmorph as vxm
 import generators
 import losses
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 def plot_history(hist):
     # Simple function to plot training history.
@@ -28,15 +29,15 @@ def plot_history(hist):
 
 # ------------ MODEL HYPERPARAMETERS AND IMAGE PATHS ---------------
 
-imgs_path = 'DataVisualization/data/ultrasound 4D npy'  # input image directory
-output_dir = 'VoxelMorph/out'                           # output model directory
+imgs_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy'  # input image directory
+output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out'                           # output model directory
 
 prefix = 'TEST'                                 # output model name prefix
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function (not implemented)
-batch_size = 4
+batch_size = 1
 lr = 1e-4                                       # learning rate (default: 1e-4)
 epochs = 50                                      # number of training epochs (default: 1500)
 steps_per_epoch = 150                           # number of training batches per epoch (default: 100)
@@ -100,26 +101,24 @@ train_generator = generators.vol_generator(train_moving, train_fixed, batch_size
 val_generator = generators.vol_generator(val_moving, val_fixed, batch_size=batch_size)
 
 # UNCOMMENT TO VISUALIZE LOADED DATA
-while True:
-    input, _ = next(train_generator)
-    plt.imshow(input[0][0,:,64,:], cmap="gray", aspect="auto", origin="lower")
-    plt.colorbar(label="Intensity")
-    plt.savefig(output_dir + '/test_slice_xz.png')
-    plt.close()
+# while True:
+#     input, _ = next(train_generator)
+#     plt.imshow(input[0][0,:,64,:], cmap="gray", aspect="auto", origin="lower")
+#     plt.colorbar(label="Intensity")
+#     plt.savefig(output_dir + '/test_slice_xz.png')
+#     plt.close()
     
-    plt.imshow(input[0][0,:,:,64], cmap="gray", aspect="auto", origin="lower")
-    plt.colorbar(label="Intensity")
-    plt.savefig(output_dir + '/test_slice_xy.png')
-    plt.close()
+#     plt.imshow(input[0][0,:,:,64], cmap="gray", aspect="auto", origin="lower")
+#     plt.colorbar(label="Intensity")
+#     plt.savefig(output_dir + '/test_slice_xy.png')
+#     plt.close()
 
-    plt.imshow(input[0][0,64,:,:], cmap="gray", aspect="auto", origin="lower")
-    plt.colorbar(label="Intensity")
-    plt.savefig(output_dir + '/test_slice_yz.png')
-    plt.close()
+#     plt.imshow(input[0][0,64,:,:], cmap="gray", aspect="auto", origin="lower")
+#     plt.colorbar(label="Intensity")
+#     plt.savefig(output_dir + '/test_slice_yz.png')
+#     plt.close()
 
-    # images = [input[0][0,:,:,0], input[1][0,:,:,0]] 
-    # titles = ['fixed', 'moving']
-    # ne.plot.slices(images, titles=titles, cmaps=['gray'], do_colorbars=True)
+#     exit()
 
 # ----------------------- MODEL CREATION -----------------------
 
@@ -130,13 +129,12 @@ nb_features = [
 ]
 
 # build model using custom model Vxm4D
-inshape = moving_bmode.shape[1:]
+inshape = next(train_generator)[0][0].shape[1:-1]
 vxm_model = vxm.networks.VxmDense(
     inshape=inshape,
     nb_unet_features=nb_features,
     bidir=bidirectional,
     int_steps=7, # number of integration steps (default: 7)
-    int_downsize=2 # flow downsample factor for integration (default: 2)
 ) #bmode_rf_network.Vxm4D(inshape, nb_features, int_steps=0)
 
 # instantiate losses
@@ -167,6 +165,20 @@ early_stop = EarlyStopping(monitor='val_loss',
     baseline=None,
     restore_best_weights=True
 )
+
+# ----------------------- GPU CHECKUP + WARMUP -----------------------
+
+print("TF:", tf.__version__)
+print("GPUs:", tf.config.list_physical_devices('GPU'))
+
+# small warm-up and test matmul
+a = tf.random.normal([1024, 1024])
+for _ in range(5):
+    _ = tf.matmul(a, a)
+
+# simple warm-up
+for _ in range(5):
+    _ = vxm_model((tf.zeros([1, *inshape, 1]), tf.zeros([1, *inshape, 1])))
 
 # ----------------------- MODEL TRAINING -----------------------
 

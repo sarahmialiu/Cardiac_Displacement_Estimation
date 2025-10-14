@@ -38,7 +38,7 @@ import numpy as np
 import torch
 import matplotlib
 matplotlib.use("TkAgg")   # or "Qt5Agg" if you have PyQt5 installed
-
+import tensorflow as tf
 import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -112,6 +112,7 @@ with tqdm(total=len(npy_files)) as pbar:
                 factors = [128/s for s in fr.shape]
                 frame = zoom(fr, factors, order=1)
                 
+                if frame_num == 0: inshape = frame.shape[1:-1]
                 if frame_num > 0:
                     fixed.append(frame / np.max(np.absolute(frame)))
                 if frame_num < num_frames-1:

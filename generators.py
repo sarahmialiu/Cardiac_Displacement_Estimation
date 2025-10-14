@@ -66,7 +66,7 @@ def vol_generator(x_data1, x_data2, batch_size=8):
         # we also wish to penalize the deformation field. 
         outputs = [fixed_images, zero_phi]
         
-        yield (inputs, outputs)
+        yield (tuple(inputs), tuple(outputs))
 
 def ordered_generator(x_data1, x_data2, batch_size=8):
     """

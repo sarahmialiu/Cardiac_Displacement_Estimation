@@ -10,9 +10,9 @@ def render_output(input, pred, hzn_flow, vert_flow):
         file_path (str): Path to a .npy file containing a 4D numpy array.
     """
 
-    assert input.shape == pred.shape and pred.shape == flow.shape, \
+    assert input.shape == pred.shape and hzn_flow.shape == vert_flow.shape, \
         f"Trying to visualize images with different shapes. \
-            Input: {input.shape}, Pred: {pred.shape}, Flow: {flow.shape}"
+            Input: {input.shape}, Pred: {pred.shape}, Horizontal Flow: {hzn_flow.shape}, Vertical Flow: {vert_flow.shape}"
 
     # Default orientation and indices
     orientation = "X, Y"
@@ -20,20 +20,26 @@ def render_output(input, pred, hzn_flow, vert_flow):
     time_index = input.shape[0] // 2
 
     # --- Figure setup ---
-    fig, (input_ax, pred_ax, hzn_flow_ax, vert_flow_ax) = plt.subplots(1, 3, figsize=(20, 5))
+    fig, (input_ax, pred_ax, hzn_flow_ax, vert_flow_ax) = plt.subplots(1, 4, figsize=(20, 5))
     plt.subplots_adjust(left=0.25, bottom=0.25)
 
     input_img = input_ax.imshow(input[time_index, :, :, slice_index], cmap="gray")
-    input_ax.set_title(f"Input ({orientation}), Slice: {slice_index}, Time: {time_index}")
+    input_ax.set_title(f"Input ({orientation})\nSlice: {slice_index}, Time: {time_index}")
 
     pred_img = pred_ax.imshow(pred[time_index, :, :, slice_index], cmap="gray")
-    pred_ax.set_title(f"Predicted ({orientation}), Slice: {slice_index}, Time: {time_index}")
+    pred_ax.set_title(f"Predicted ({orientation})\nSlice: {slice_index}, Time: {time_index}")
     
-    hzn_flow_img = hzn_flow_ax.imshow(flow[time_index, :, :, slice_index], cmap="gray")
-    hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation}), Slice: {slice_index}, Time: {time_index}")
+    hzn_flow_img = hzn_flow_ax.imshow(hzn_flow[time_index, :, :, slice_index//2], cmap="bwr", vmin = -1, vmax = 1)
+    vert_flow_img = vert_flow_ax.imshow(vert_flow[time_index, :, :, slice_index//2], cmap="bwr", vmin = -1, vmax = 1)
+    if time_index % 2 == 0:
+        hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
+        vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
+    else:
+        hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index-1}-{time_index}")
+        vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index-1}-{time_index}")
 
-    vert_flow_img = vert_flow_ax.imshow(flow[time_index, :, :, slice_index], cmap="gray")
-    vert_flow_ax.set_title(f"Vertical Displacement ({orientation}), Slice: {slice_index}, Time: {time_index}")
+
+    
 
     # --- Slider for slice and time indices ---
     slice_ax_slider = plt.axes([0.25, 0.1, 0.65, 0.03])
@@ -68,27 +74,31 @@ def render_output(input, pred, hzn_flow, vert_flow):
         if orientation == "X, Y":
             input_data = input[time_idx, :, :, slice_idx]
             pred_data = pred[time_idx, :, :, slice_idx]
-            hzn_flow_data = hzn_flow[time_idx, :, :, slice_idx]
-            vert_flow_data = vert_flow[time_idx, :, :, slice_idx]
+            hzn_flow_data = hzn_flow[time_idx, :, :, slice_idx//2]
+            vert_flow_data = vert_flow[time_idx, :, :, slice_idx//2]
         elif orientation == "X, Z":
             input_data = input[time_idx, :, slice_idx, :].T
             pred_data = pred[time_idx, :, slice_idx, :].T
-            hzn_flow_data = hzn_flow[time_idx, :, slice_idx, :].T
-            vert_flow_data = vert_flow[time_idx, :, slice_idx, :].T
+            hzn_flow_data = hzn_flow[time_idx, :, slice_idx//2, :].T
+            vert_flow_data = vert_flow[time_idx, :, slice_idx//2, :].T
         elif orientation == "Y, Z":
             input_data = input[time_idx, slice_idx, :, :].T
             pred_data = pred[time_idx, slice_idx, :, :].T
-            vert_flow_data = vert_flow[time_idx, slice_idx, :, :].T
-            hzn_flow_data = hzn_flow[time_idx, slice_idx, :, :].T
+            vert_flow_data = vert_flow[time_idx, slice_idx//2, :, :].T
+            hzn_flow_data = hzn_flow[time_idx, slice_idx//2, :, :].T
 
         input_img.set_data(input_data)
         pred_img.set_data(pred_data)
         hzn_flow_img.set_data(hzn_flow_data)
         vert_flow_img.set_data(vert_flow_data)
-        input_ax.set_title(f"Input ({orientation}), Slice: {slice_idx}, Time: {time_idx}")
-        pred_ax.set_title(f"Predicted ({orientation}), Slice: {slice_idx}, Time: {time_idx}")
-        hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation}), Slice: {slice_idx}, Time: {time_idx}")
-        vert_flow_ax.set_title(f"Vertical Displacement ({orientation}), Slice: {slice_idx}, Time: {time_idx}")
+        input_ax.set_title(f"Input ({orientation})\nSlice: {slice_idx}, Time: {time_idx}")
+        pred_ax.set_title(f"Predicted ({orientation})\nSlice: {slice_idx}, Time: {time_idx}")
+        if time_idx % 2 == 0:
+            hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")
+            vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")
+        else:
+            hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx-1}-{time_idx}")
+            vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx-1}-{time_idx}")
         fig.canvas.draw_idle()
 
     def update_image(val):

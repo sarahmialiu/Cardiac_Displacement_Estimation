@@ -33,7 +33,7 @@ moving = []
 print("Loading 3D US file: " + img_path)
 scan = np.load(img_path, allow_pickle=True)
 
-num_frames = scan.shape[0]
+num_frames = 20 #scan.shape[0]
 
 with tqdm(total=num_frames) as pbar2:
     for frame_num in range(num_frames):
@@ -85,24 +85,24 @@ vxm_model.load_weights(weights_path)
 
 input = np.zeros([num_frames, ht, wd, dp])
 pred = np.zeros([num_frames, ht, wd, dp])
-hzn_flow = np.zeros([num_frames, ht, wd, dp])
-vert_flow = np.zeros([num_frames, ht, wd, dp])
+hzn_flow = np.zeros([num_frames, ht//2, wd//2, dp//2])
+vert_flow = np.zeros([num_frames, ht//2, wd//2, dp//2])
 
 for i in range(len(moving)):
     test_input, _ = next(test_generator)
-    input[i] = test_input[1].squeeze()
+    input[i] = test_input[1].squeeze() # start visualization at t = 1
 
     test_pred, test_flow = vxm_model.predict(test_input, verbose=0)
     pred[i] = test_pred.squeeze()
-    hzn_flow = test_flow.squeeze()[..., 0]
-    vert_flow = test_flow.squeeze()[..., 1]
+    hzn_flow[i] = test_flow.squeeze()[..., 0]
+    vert_flow[i] = test_flow.squeeze()[..., 1]
     # pred_flow = test_pred[1].squeeze()
     
-print(input.shape, pred.shape, hzn_flow.shape)
+print(input.shape, pred.shape, hzn_flow.shape, vert_flow.shape)
 
 # ----------------------- VISUALIZE MODEL PREDICTIONS -----------------------
 
-render_output(input, pred, hzn_flow)
+render_output(input, pred, hzn_flow, vert_flow)
 
 # # Moving/Fixed/Moved
 # images = [cv2.resize(img[0, :, :, 0], (512, 512), interpolation=cv2.INTER_NEAREST) for img in test_input + tuple(test_pred)] 

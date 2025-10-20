@@ -20,7 +20,7 @@ def render_output(input, pred, hzn_flow, vert_flow):
     time_index = input.shape[0] // 2
 
     # --- Figure setup ---
-    fig, (input_ax, pred_ax, hzn_flow_ax, vert_flow_ax) = plt.subplots(1, 4, figsize=(20, 5))
+    fig, (input_ax, pred_ax, hzn_flow_ax, vert_flow_ax, vector_ax) = plt.subplots(1, 5, figsize=(25, 5))
     plt.subplots_adjust(left=0.25, bottom=0.25)
 
     input_img = input_ax.imshow(input[time_index, :, :, slice_index], cmap="gray")
@@ -31,15 +31,17 @@ def render_output(input, pred, hzn_flow, vert_flow):
     
     hzn_flow_img = hzn_flow_ax.imshow(hzn_flow[time_index, :, :, slice_index//2], cmap="bwr", vmin = -1, vmax = 1)
     vert_flow_img = vert_flow_ax.imshow(vert_flow[time_index, :, :, slice_index//2], cmap="bwr", vmin = -1, vmax = 1)
-    if time_index % 2 == 0:
-        hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
-        vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
-    else:
-        hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index-1}-{time_index}")
-        vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index-1}-{time_index}")
-
-
     
+    hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
+    vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
+    vector_ax.set_title(f"Displacement ({orientation})\nSlice: {slice_index}, Time: {time_index}-{time_index+1}")
+
+    vector_img  = vector_ax.imshow(input[time_index, ::2, ::2, slice_index], cmap="gray")
+    Y, X = np.mgrid[0:64, 0:64]
+    quiver = vector_ax.quiver(X, Y, hzn_flow[time_index, :, :, slice_index//2], vert_flow[time_index, :, :, slice_index//2], color='red', scale=40)
+
+    fig.colorbar(hzn_flow_img, ax=hzn_flow_ax, orientation='horizontal')
+    fig.colorbar(vert_flow_img, ax=vert_flow_ax, orientation='vertical')
 
     # --- Slider for slice and time indices ---
     slice_ax_slider = plt.axes([0.25, 0.1, 0.65, 0.03])
@@ -91,14 +93,15 @@ def render_output(input, pred, hzn_flow, vert_flow):
         pred_img.set_data(pred_data)
         hzn_flow_img.set_data(hzn_flow_data)
         vert_flow_img.set_data(vert_flow_data)
+        vector_img.set_data(input_data[::2, ::2])
+        quiver.set_UVC(hzn_flow_data, vert_flow_data)
+
         input_ax.set_title(f"Input ({orientation})\nSlice: {slice_idx}, Time: {time_idx}")
         pred_ax.set_title(f"Predicted ({orientation})\nSlice: {slice_idx}, Time: {time_idx}")
-        if time_idx % 2 == 0:
-            hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")
-            vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")
-        else:
-            hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx-1}-{time_idx}")
-            vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx-1}-{time_idx}")
+
+        hzn_flow_ax.set_title(f"Horizontal Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")
+        vert_flow_ax.set_title(f"Vertical Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")
+        vector_ax.set_title(f"Displacement ({orientation})\nSlice: {slice_idx}, Time: {time_idx}-{time_idx+1}")    
         fig.canvas.draw_idle()
 
     def update_image(val):

@@ -12,7 +12,7 @@ from scipy.ndimage import zoom
 import voxelmorph as vxm 
 import generators
 import losses
-import render_output
+import keras
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -33,20 +33,20 @@ def plot_history(hist):
 file_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy'  # input image directory
 output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/'                           # output model directory
 
-prefix = 'Masked'                                 # output model name prefix
+prefix = 'Unmasked'                                 # output model name prefix
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function (not implemented)
 batch_size = 1
-lr = 1e-5                                       # learning rate (default: 1e-4)
+lr = 5e-5                                       # learning rate (default: 1e-4)
 epochs = 50                                     # number of training epochs (default: 1500)
 steps_per_epoch = 150                           # number of training batches per epoch (default: 100)
 val_steps_per_epoch = 30
 initial_epoch = 0                               # initial epoch number (default: 0)
 debug = False                                   # when debug = True, script only loads two scans and trains for two epochs
 ncc = False
-masked = True
+masked = False
 
 
 # ----------------------- DATA PREPROCESSING -----------------------
@@ -165,7 +165,7 @@ vxm_model.compile(
 
 reduce_lr = ReduceLROnPlateau(monitor='val_loss',  
     factor=0.1,
-    patience=3,
+    patience=7,
     verbose=1,
     mode='auto',
     min_delta=0.0001,

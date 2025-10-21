@@ -9,15 +9,15 @@ from render_output import render_output
 # ------------ MODEL HYPERPARAMETERS AND IMAGE PATHS ---------------
 
 img_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30.npy'  # input image directory
-output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out'                           # output model directory
-
-weights_path = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/TEST.weights.h5'
+mask_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30_biv.npy'
+output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/'                           # output model directory
+weights_path = 'VoxelMorph/out/TEST.weights.h5'
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function
-batch_size = 1
 ncc = False
+masked = False
 
 # ----------------------- DATA PREPROCESSING -----------------------
 
@@ -31,6 +31,9 @@ moving = []
 # load images from paths and arrange into ordered 'fixed' and 'moving' lists
 print("Loading 3D US file: " + img_path)
 scan = np.load(img_path, allow_pickle=True)
+if masked: 
+    print("Load 3D mask: " + mask_path)
+    mask = np.load(mask_path, allow_pickle=True)
 
 num_frames = 20 #scan.shape[0]
 
@@ -39,6 +42,10 @@ with tqdm(total=num_frames) as pbar2:
         fr = scan[frame_num,:,:,:]
         factors = [128/s for s in fr.shape]
         frame = zoom(fr, factors, order=1)
+        if masked:
+            msk_fr = mask[frame_num, :, :]
+            msk_frame = zoom(msk_fr, factors, order=1)
+            frame = frame * msk_frame
         
         if frame_num > 0:
             fixed.append(frame / np.max(np.absolute(frame)))
@@ -55,7 +62,7 @@ test_moving = np.array(moving)
 # prints the number of image pairs for training and validation sets
 print("Testing Dataset Length: %d" % len(test_fixed))
 
-test_generator = generators.vol_generator(test_moving, test_fixed, batch_size=batch_size)
+test_generator = generators.ordered_vol_generator(test_moving, test_fixed, batch_size=1)
 
 # ----------------------- MODEL LOADING AND PREDICTION -----------------------
 
@@ -82,22 +89,33 @@ vxm_model.compile(optimizer='Adam', loss=losses, loss_weights=loss_weights)
 
 vxm_model.load_weights(weights_path)
 
-input = np.zeros([num_frames, ht, wd, dp])
-pred = np.zeros([num_frames, ht, wd, dp])
-hzn_flow = np.zeros([num_frames, ht//2, wd//2, dp//2])
-vert_flow = np.zeros([num_frames, ht//2, wd//2, dp//2])
+input = np.zeros([num_frames-1, ht, wd, dp])
+pred = np.zeros([num_frames-1, ht, wd, dp])
+real = np.zeros([num_frames-1, ht, wd, dp])
+hzn_flow = np.zeros([num_frames-1, ht//2, wd//2, dp//2])
+vert_flow = np.zeros([num_frames-1, ht//2, wd//2, dp//2])
+
+if masked: factors = [num/2 for num in factors]
 
 for i in range(len(moving)):
-    test_inputs, test_outputs = next(test_generator)
-    input[i] = test_inputs[0].squeeze() 
+    idx, test_inputs, test_outputs = next(test_generator)
+    input[i] = test_inputs[0].squeeze()
+    real[i] = test_inputs[1].squeeze() 
 
     test_pred, test_flow = vxm_model.predict(test_inputs, verbose=0)
-    pred[i+1] = test_pred.squeeze()
-    hzn_flow[i+1] = test_flow.squeeze()[..., 0]
-    vert_flow[i+1] = test_flow.squeeze()[..., 1]
+    pred[i] = test_pred.squeeze()
     
+    hzn = test_flow.squeeze()[..., 0]
+    vert = test_flow.squeeze()[..., 1]
+    if masked:
+        msk_fr = zoom(mask[idx[0], ...], factors, order=1)
+        hzn = msk_fr * hzn
+        vert = msk_fr * vert
+    hzn_flow[i] = hzn
+    vert_flow[i] = vert
+
 print(input.shape, pred.shape, hzn_flow.shape, vert_flow.shape)
 
 # ----------------------- VISUALIZE MODEL PREDICTIONS -----------------------
 
-render_output(input, pred, hzn_flow, vert_flow)
+render_output(input, pred, real, hzn_flow, vert_flow)

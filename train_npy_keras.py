@@ -26,33 +26,35 @@ def plot_history(hist):
     plt.xlabel('Epoch')
     plt.title('VoxelMorph Training Loss')
     
-    plt.savefig(prefix + '_loss.png')
+    plt.savefig(output_dir + prefix + '_loss.png')
 
 # ------------ MODEL HYPERPARAMETERS AND IMAGE PATHS ---------------
 
-imgs_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy'  # input image directory
-output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out'                           # output model directory
+file_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy'  # input image directory
+output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/'                           # output model directory
 
-prefix = 'TEST'                                 # output model name prefix
+prefix = 'Masked'                                 # output model name prefix
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function (not implemented)
 batch_size = 1
 lr = 1e-4                                       # learning rate (default: 1e-4)
-epochs = 50                                      # number of training epochs (default: 1500)
+epochs = 50                                     # number of training epochs (default: 1500)
 steps_per_epoch = 150                           # number of training batches per epoch (default: 100)
 val_steps_per_epoch = 30
 initial_epoch = 0                               # initial epoch number (default: 0)
 debug = False                                   # when debug = True, script only loads two scans and trains for two epochs
 ncc = False
+masked = True
 
 
 # ----------------------- DATA PREPROCESSING -----------------------
 
 # load and prepare training data
-files = os.listdir(imgs_path)
-npy_files = [imgs_path + '/' + f for f in files if f.endswith('.npy') and len(f) == 19] # shape (T, Z, Y, X)
+files = os.listdir(file_path)
+img_files = [file_path + '/' + f for f in files if f.endswith('.npy') and len(f) == 19] # shape (T, Z, Y, X)
+mask_files = [file_path + '/' + f for f in files if f.endswith('_biv.npy') and len(f) == 23]
 
 #Interpolation parameters: input image dimensions (px x px)
 ht=128 #512 
@@ -62,10 +64,14 @@ fixed = []
 moving = []
 
 # load images from paths and arrange into ordered 'fixed' and 'moving' lists
-with tqdm(total=len(npy_files)) as pbar:
-    for i, file_path in enumerate(npy_files):
-        print("Loading 3D US file: " + file_path)
-        scan = np.load(file_path, allow_pickle=True)
+with tqdm(total=len(img_files)) as pbar:
+    for i, img_path in enumerate(img_files):
+        print("Loading 3D US file: " + img_path)
+        scan = np.load(img_path, allow_pickle=True)
+        if masked: 
+            mask_path = mask_files[i]
+            print("Load 3D mask: " + mask_path)
+            mask = np.load(mask_path, allow_pickle=True)
 
         num_frames = scan.shape[0]
         if debug: num_frames = 25
@@ -75,6 +81,10 @@ with tqdm(total=len(npy_files)) as pbar:
                 fr = scan[frame_num,:,:,:]
                 factors = [128/s for s in fr.shape]
                 frame = zoom(fr, factors, order=1)
+                if masked:
+                    msk_fr = mask[frame_num, :, :]
+                    msk_frame = zoom(msk_fr, factors, order=1)
+                    frame = frame * msk_frame
                 
                 if frame_num > 0:
                     fixed.append(frame / np.max(np.absolute(frame)))
@@ -201,6 +211,6 @@ hist = vxm_model.fit(train_generator,
                      validation_steps=val_steps_per_epoch,
                      callbacks=[reduce_lr, early_stop]) #, tqdm_progress])
     
-vxm_model.save_weights(prefix + ".weights.h5")
+vxm_model.save_weights(output_dir + prefix + ".weights.h5")
 
 plot_history(hist)

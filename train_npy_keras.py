@@ -39,7 +39,7 @@ device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function (not implemented)
 batch_size = 1
-lr = 1e-4                                       # learning rate (default: 1e-4)
+lr = 1e-5                                       # learning rate (default: 1e-4)
 epochs = 50                                     # number of training epochs (default: 1500)
 steps_per_epoch = 150                           # number of training batches per epoch (default: 100)
 val_steps_per_epoch = 30
@@ -54,7 +54,7 @@ masked = True
 # load and prepare training data
 files = os.listdir(file_path)
 img_files = [file_path + '/' + f for f in files if f.endswith('.npy') and len(f) == 19] # shape (T, Z, Y, X)
-mask_files = [file_path + '/' + f for f in files if f.endswith('_biv.npy') and len(f) == 23]
+mask_files = [file_path + '/' + f for f in files if f.endswith('biv.npy') and len(f) == 23]
 
 #Interpolation parameters: input image dimensions (px x px)
 ht=128 #512 
@@ -95,7 +95,7 @@ with tqdm(total=len(img_files)) as pbar:
 
         print("Total Loading Progress: ")
         pbar.update()
-        if debug == True: break
+        # if debug == True: break
 pbar.close()
 print()
 
@@ -156,7 +156,12 @@ else:
     loss_weights = [100, 5]
     losses = [vxm.losses.MSE().loss, vxm.losses.Grad('l2').loss]
 
-vxm_model.compile(optimizer='Adam', loss=losses, loss_weights=loss_weights)
+# vxm_model.compile(optimizer='Adam', loss=losses, loss_weights=loss_weights)
+vxm_model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=lr),
+    loss=losses,
+    loss_weights=loss_weights,
+)
 
 reduce_lr = ReduceLROnPlateau(monitor='val_loss',  
     factor=0.1,

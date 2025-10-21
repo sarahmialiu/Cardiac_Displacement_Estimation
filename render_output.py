@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, RadioButtons
+from sklearn.metrics import mean_squared_error
 
 def render_output(input, pred, real, hzn_flow, vert_flow):
     """
@@ -23,7 +24,9 @@ def render_output(input, pred, real, hzn_flow, vert_flow):
     fig, ((input_ax, pred_ax, real_ax), (hzn_flow_ax, vert_flow_ax, vector_ax)) = plt.subplots(2, 3)
     plt.subplots_adjust(left=0.25, bottom=0.25)
 
-    fig.suptitle(f"Slice: {slice_index}")
+    input_mse = mean_squared_error(input[time_index, :, :, slice_index].ravel(), pred[time_index, :, :, slice_index].ravel())
+    pred_mse = mean_squared_error(pred[time_index, :, :, slice_index].ravel(), real[time_index, :, :, slice_index].ravel())
+    fig.suptitle(f"MSE Input: {input_mse:.3e}       Slice: {slice_index}       MSE Real: {pred_mse:.3e}")
     
     input_img = input_ax.imshow(input[time_index, :, :, slice_index], cmap="gray")
     input_ax.set_title(f"Input (Frame: {time_index})")
@@ -118,7 +121,9 @@ def render_output(input, pred, real, hzn_flow, vert_flow):
         vert_flow_ax.set_title(f"Vertical Displacement \nFrames {time_idx}-{time_idx+1}")
         vector_ax.set_title(f"Displacement \nFrames {time_idx}-{time_idx+1}")    
         
-        fig.suptitle(f"\nSlice: {slice_idx}")
+        in_mse = mean_squared_error(input_data.ravel(), pred_data.ravel())
+        rl_mse = mean_squared_error(pred_data.ravel(), real_data.ravel())
+        fig.suptitle(f"MSE Input: {in_mse:.3e}      Slice: {slice_idx}      MSE Real: {rl_mse:.3e}")
         fig.canvas.draw_idle()
 
     def update_image(val):

@@ -11,13 +11,13 @@ from render_output import render_output
 img_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30.npy'  # input image directory
 mask_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30_biv.npy'
 output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/'                           # output model directory
-weights_path = 'VoxelMorph/out/TEST.weights.h5'
+weights_path = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/Masked.weights.h5'
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function
 ncc = False
-masked = False
+masked = True
 
 # ----------------------- DATA PREPROCESSING -----------------------
 
@@ -35,7 +35,7 @@ if masked:
     print("Load 3D mask: " + mask_path)
     mask = np.load(mask_path, allow_pickle=True)
 
-num_frames = 20 #scan.shape[0]
+num_frames = 4 #scan.shape[0]
 
 with tqdm(total=num_frames) as pbar2:
     for frame_num in range(num_frames):

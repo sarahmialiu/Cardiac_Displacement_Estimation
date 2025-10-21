@@ -33,13 +33,13 @@ def plot_history(hist):
 file_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy'  # input image directory
 output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/'                           # output model directory
 
-prefix = 'Unmasked'                                 # output model name prefix
+prefix = 'Unmasked_cont'                                 # output model name prefix
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function (not implemented)
 batch_size = 1
-lr = 5e-5                                       # learning rate (default: 1e-4)
+lr = 5e-6                                       # learning rate (default: 1e-4)
 epochs = 50                                     # number of training epochs (default: 1500)
 steps_per_epoch = 150                           # number of training batches per epoch (default: 100)
 val_steps_per_epoch = 30
@@ -74,7 +74,7 @@ with tqdm(total=len(img_files)) as pbar:
             mask = np.load(mask_path, allow_pickle=True)
 
         num_frames = scan.shape[0]
-        if debug: num_frames = 25
+        if debug: num_frames = 10
 
         with tqdm(total=num_frames) as pbar2:
             for frame_num in range(num_frames):
@@ -147,6 +147,8 @@ vxm_model = vxm.networks.VxmDense(
     bidir=bidirectional,
     int_steps=7, # number of integration steps (default: 7)
 ) #bmode_rf_network.Vxm4D(inshape, nb_features, int_steps=0)
+
+vxm_model.load_weights('/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/Unmasked.weights.h5')
 
 # instantiate losses
 if ncc:

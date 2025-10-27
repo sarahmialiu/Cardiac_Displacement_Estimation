@@ -33,19 +33,20 @@ def plot_history(hist):
 file_path = '/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy'  # input image directory
 output_dir = '/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/'                           # output model directory
 
-prefix = 'Unmasked_cont'                                 # output model name prefix
+prefix = 'Unmasked_newMSE'                                 # output model name prefix
 gpus = [0]
 device = 'cuda:0'
 cudnn_nondet = True                             # disable cudnn determinism - might slow down training
 bidirectional = False                           # enable bidirectional cost function (not implemented)
 batch_size = 1
-lr = 5e-6                                       # learning rate (default: 1e-4)
+lr = 5e-5                                       # learning rate (default: 1e-4)
 epochs = 50                                     # number of training epochs (default: 1500)
 steps_per_epoch = 150                           # number of training batches per epoch (default: 100)
 val_steps_per_epoch = 30
 initial_epoch = 0                               # initial epoch number (default: 0)
 debug = False                                   # when debug = True, script only loads two scans and trains for two epochs
 ncc = False
+mse_penalization = True                         # penalize outputs that are close to input image
 masked = False
 
 
@@ -108,8 +109,12 @@ train_fixed, val_fixed, train_moving, val_moving = train_test_split(moving, fixe
 print("Training Dataset Length: %d" % len(train_fixed))
 print("Validation Dataset Length: %d" % len(val_fixed))
 
-train_generator = generators.vol_generator(train_moving, train_fixed, batch_size=batch_size)
-val_generator = generators.vol_generator(val_moving, val_fixed, batch_size=batch_size)
+if mse_penalization:
+    train_generator = generators.vol_generator_new(train_moving, train_fixed, batch_size=batch_size)
+    val_generator = generators.vol_generator_new(train_moving, train_fixed, batch_size=batch_size)
+else:
+    train_generator = generators.vol_generator(train_moving, train_fixed, batch_size=batch_size)
+    val_generator = generators.vol_generator(val_moving, val_fixed, batch_size=batch_size)
 
 # UNCOMMENT TO VISUALIZE LOADED DATA
 # while True:
@@ -148,12 +153,15 @@ vxm_model = vxm.networks.VxmDense(
     int_steps=7, # number of integration steps (default: 7)
 ) #bmode_rf_network.Vxm4D(inshape, nb_features, int_steps=0)
 
-vxm_model.load_weights('/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/Unmasked.weights.h5')
+# vxm_model.load_weights('/home/sarahl/Documents/Fall Rotation/VoxelMorph/out/Unmasked.weights.h5')
 
 # instantiate losses
 if ncc:
     loss_weights = [-1, 0.01]   
     losses = [vxm.losses.NCC(win=[10, 45]).loss, vxm.losses.Grad('l2').loss]
+elif mse_penalization:
+    loss_weights = [100, 5]
+    losses = [losses.moving_MSE().loss, vxm.losses.Grad('l2').loss]
 else:
     loss_weights = [100, 5]
     losses = [vxm.losses.MSE().loss, vxm.losses.Grad('l2').loss]

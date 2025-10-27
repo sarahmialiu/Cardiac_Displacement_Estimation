@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import math
+import tensorflow as tf
 
 
 class NCC:
@@ -74,6 +75,20 @@ class MSE:
 
     def loss(self, y_true, y_pred):
         return torch.mean((y_true - y_pred) ** 2)
+
+
+class moving_MSE:
+    """
+    Mean square error loss comparing predicted image to original moving image.
+    Penalizes model for predicting images close to input image.
+    """
+
+    def loss(self, y_true, y_pred):
+        fixed = y_true[..., 0:1]
+        moving = y_true[..., 1:2]
+        mse_fixed = tf.reduce_mean(tf.square(y_pred - fixed))
+        mse_moving = tf.reduce_mean(tf.square(y_pred - moving))
+        return mse_fixed - 0.3 * mse_moving
 
 
 class Dice:

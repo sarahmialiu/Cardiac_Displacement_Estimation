@@ -5,6 +5,7 @@ import voxelmorph as vxm  # nopep8
 import generators
 import losses
 from render_output import render_output
+from deform_mesh import deform_mask
 
 # ------------ MODEL HYPERPARAMETERS AND IMAGE PATHS ---------------
 
@@ -34,7 +35,7 @@ scan = np.load(img_path, allow_pickle=True)
 print("Load 3D mask: " + mask_path)
 mask = np.load(mask_path, allow_pickle=True)
 
-num_frames = 35 #scan.shape[0]
+num_frames = 5 #scan.shape[0]
 
 with tqdm(total=num_frames) as pbar2:
     for frame_num in range(num_frames):
@@ -117,4 +118,6 @@ print(input.shape, pred.shape, hzn_flow.shape, vert_flow.shape)
 
 # ----------------------- VISUALIZE MODEL PREDICTIONS -----------------------
 
-render_output(input, pred, real, hzn_flow, vert_flow)
+# render_output(input, pred, real, hzn_flow, vert_flow)
+
+deform_mask(mask, hzn_flow, vert_flow)

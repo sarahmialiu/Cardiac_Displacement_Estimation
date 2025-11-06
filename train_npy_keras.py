@@ -110,31 +110,31 @@ print("Training Dataset Length: %d" % len(train_fixed))
 print("Validation Dataset Length: %d" % len(val_fixed))
 
 if mse_penalization:
-    train_generator = generators.vol_generator_new(train_moving, train_fixed, batch_size=batch_size)
-    val_generator = generators.vol_generator_new(train_moving, train_fixed, batch_size=batch_size)
+    train_generator = generators.vol_generator_input_output(train_moving, train_fixed, batch_size=batch_size)
+    val_generator = generators.vol_generator_input_output(train_moving, train_fixed, batch_size=batch_size)
 else:
     train_generator = generators.vol_generator(train_moving, train_fixed, batch_size=batch_size)
     val_generator = generators.vol_generator(val_moving, val_fixed, batch_size=batch_size)
 
 # UNCOMMENT TO VISUALIZE LOADED DATA
-# while True:
-#     input, _ = next(train_generator)
-#     plt.imshow(input[0][0,:,64,:], cmap="gray", aspect="auto", origin="lower")
-#     plt.colorbar(label="Intensity")
-#     plt.savefig(output_dir + '/test_slice_xz.png')
-#     plt.close()
+while True:
+    input, _ = next(train_generator)
+    plt.imshow(input[0][0,:,64,:], cmap="gray", aspect="auto", origin="lower")
+    plt.colorbar(label="Intensity")
+    plt.savefig(output_dir + '/test_slice_xz.png')
+    plt.close()
     
-#     plt.imshow(input[0][0,:,:,64], cmap="gray", aspect="auto", origin="lower")
-#     plt.colorbar(label="Intensity")
-#     plt.savefig(output_dir + '/test_slice_xy.png')
-#     plt.close()
+    plt.imshow(input[0][0,:,:,64], cmap="gray", aspect="auto", origin="lower")
+    plt.colorbar(label="Intensity")
+    plt.savefig(output_dir + '/test_slice_xy.png')
+    plt.close()
 
-#     plt.imshow(input[0][0,64,:,:], cmap="gray", aspect="auto", origin="lower")
-#     plt.colorbar(label="Intensity")
-#     plt.savefig(output_dir + '/test_slice_yz.png')
-#     plt.close()
+    plt.imshow(input[0][0,64,:,:], cmap="gray", aspect="auto", origin="lower")
+    plt.colorbar(label="Intensity")
+    plt.savefig(output_dir + '/test_slice_yz.png')
+    plt.close()
 
-#     exit()
+    exit()
 
 # ----------------------- MODEL CREATION -----------------------
 

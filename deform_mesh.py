@@ -1,27 +1,63 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.widgets import Slider, RadioButtons
-from sklearn.metrics import mean_squared_error
+from voxelmorph.tf import layers
+import tensorflow as tf
 
-def deform_mask(mask):#, hzn_flow, vert_flow):
+def deform_mask(mask, hzn_flow, vert_flow, dep_flow):
+    warped_mask = np.zeros(mask.shape)
+    residual = np.zeros(mask.shape)
+    transform_layer = layers.SpatialTransformer(interp_method="linear", indexing="ij")
+    
+    for frame_num in range(1, mask.shape[0]):
+        if frame_num == 1:
+            warped_mask[0] = mask[0]
+            mask_frame = tf.convert_to_tensor(
+                mask[0, np.newaxis, ..., np.newaxis], 
+                dtype=tf.float32)
+        else:
+            mask_frame = tf.convert_to_tensor(
+                warped_mask[frame_num-1, np.newaxis, ..., np.newaxis],
+                dtype=tf.float32)
+            
+        hzn_flow_fr = hzn_flow[frame_num-1, np.newaxis, ..., np.newaxis]
+        vert_flow_fr = vert_flow[frame_num-1, np.newaxis, ..., np.newaxis]
+        dep_flow_fr = dep_flow[frame_num-1, np.newaxis, ..., np.newaxis]
 
-    # assert hzn_flow.shape == vert_flow.shape, \
-    #     f"Trying to visualize images with different shapes. \
-    #         Horizontal Flow: {hzn_flow.shape}, Vertical Flow: {vert_flow.shape}"
+        # flow_frame = tf.convert_to_tensor(
+        #     np.concatenate([hzn_flow_fr, vert_flow_fr, dep_flow_fr], axis=-1), 
+        #     dtype=tf.float32)
+        flow_frame = tf.convert_to_tensor(
+            np.concatenate([dep_flow_fr, vert_flow_fr, hzn_flow_fr], axis=-1),
+            dtype=tf.float32)
+        flow_frame = layers.RescaleTransform(2)(flow_frame)
+        frame = transform_layer([mask_frame, flow_frame])
+        warped_mask[frame_num] = frame.numpy().squeeze()
 
+        residual[frame_num] = - mask[frame_num] + warped_mask[frame_num]
+    
     # Default orientation and indices
     orientation = "X, Y"
     slice_index = mask.shape[3] // 2
     time_index = mask.shape[0] // 2
 
     # --- Figure setup ---
-    fig = plt.figure()
-    ax = fig.add_subplot()
+    fig, (real_ax, pred_ax, res_ax) = plt.subplots(1, 3)
+    plt.subplots_adjust(left=0.2, bottom=0.2)
 
-    img = ax.imshow(mask[time_index, :, :, slice_index], cmap="gray")
-    ax.set_title(f"Frame: {time_index})")
-    ax.set_axis_off()
+    real_mask = real_ax.imshow(mask[time_index, :, :, slice_index], cmap="gray")
+    real_ax.set_title(f"Real Mask")
+    real_ax.set_axis_off()    
 
+    pred_mask = pred_ax.imshow(warped_mask[time_index, :, :, slice_index], cmap="gray")
+    pred_ax.set_title(f"Deformed Mask")
+    pred_ax.set_axis_off()
+
+    res_mask = res_ax.imshow(residual[time_index, :, :, slice_index], cmap="gray")
+    res_ax.set_title("Residual Plot")
+    res_ax.set_axis_off()
+
+    fig.suptitle(f"Slice: {slice_index}, Frame: {time_index}")
 
     # --- Slider for slice and time indices ---
     
@@ -53,16 +89,24 @@ def deform_mask(mask):#, hzn_flow, vert_flow):
     def update_display():
         time_idx = int(time_slider.val)
         slice_idx = int(slice_slider.val)
-        ax.set_title(f"Frame: {time_idx}")   
+        fig.suptitle(f"Slice: {slice_idx}, Frame: {time_idx}")
 
         if orientation == "X, Y":
-            data = mask[time_idx, :, :, slice_idx]
+            real_data = mask[time_idx, :, :, slice_idx]
+            pred_data = warped_mask[time_idx, :, :, slice_idx]
+            res_data = residual[time_idx, :, :, slice_idx]
         elif orientation == "X, Z":
-            data = mask[time_idx, :, slice_idx, :].T
+            real_data = mask[time_idx, :, slice_idx, :].T
+            pred_data = warped_mask[time_idx, :, slice_idx, :].T
+            res_data = residual[time_idx, :, slice_idx, :].T
         elif orientation == "Y, Z":
-            data = mask[time_idx, slice_idx, :, :].T
+            real_data = mask[time_idx, slice_idx, :, :].T
+            pred_data = warped_mask[time_idx, slice_idx, :, :].T
+            res_data = residual[time_idx, slice_idx, :, :].T
 
-        img.set_data(data)
+        real_mask.set_data(real_data)
+        pred_mask.set_data(pred_data)
+        res_mask.set_data(res_data)
         fig.canvas.draw_idle()
 
     def update_image(val):
@@ -101,5 +145,8 @@ def deform_mask(mask):#, hzn_flow, vert_flow):
     plt.show()
 
 # Load volume
-mask = np.load("/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30_biv.npy", allow_pickle=True)
-deform_mask(mask)
+mask = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/resizedmask_random.npy", allow_pickle=True)
+hzn_flow = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/hzn_flow_random.npy")
+vert_flow = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/vert_flow_random.npy")
+dep_flow = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/dep_flow_random.npy")
+deform_mask(mask, hzn_flow, vert_flow, dep_flow)

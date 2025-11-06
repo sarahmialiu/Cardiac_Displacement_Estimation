@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, RadioButtons
 from sklearn.metrics import mean_squared_error
 
-def render_output(input, pred, real, hzn_flow, vert_flow):
+def render_output(input, pred, real, hzn_flow, vert_flow, dep_flow):
     """
     Interactive viewer for 4D ultrasound data (T, X, Y, Z).
     
@@ -11,9 +11,9 @@ def render_output(input, pred, real, hzn_flow, vert_flow):
         file_path (str): Path to a .npy file containing a 4D numpy array.
     """
 
-    assert input.shape == pred.shape and hzn_flow.shape == vert_flow.shape, \
+    assert input.shape == pred.shape and hzn_flow.shape == vert_flow.shape and vert_flow.shape == dep_flow.shape, \
         f"Trying to visualize images with different shapes. \
-            Input: {input.shape}, Pred: {pred.shape}, Horizontal Flow: {hzn_flow.shape}, Vertical Flow: {vert_flow.shape}"
+            Input: {input.shape}, Pred: {pred.shape}, Horizontal Flow: {hzn_flow.shape}, Vertical Flow: {vert_flow.shape}, Depth Flow: {dep_flow.shape}"
 
     # Default orientation and indices
     orientation = "X, Y"
@@ -164,5 +164,8 @@ def render_output(input, pred, real, hzn_flow, vert_flow):
 # Load volume
 # input = np.load("/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30.npy", allow_pickle=True)
 # pred = np.load("/home/sarahl/Documents/Fall Rotation/DataVisualization/data/ultrasound_4D_npy/2024-06-26_US30_biv.npy", allow_pickle=True)
-
-# render_output(input, pred)
+# mask = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/resizedmask.npy", allow_pickle=True)
+# hzn_flow = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/hzn_flow.npy")
+# vert_flow = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/vert_flow.npy")
+# dep_flow = np.load("/home/sarahl/Documents/Fall Rotation/VoxelMorph/dep_flow.npy")
+# render_output(input, pred, hzn_flow, vert_flow, dep_flow)
